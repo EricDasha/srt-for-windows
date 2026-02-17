@@ -66,6 +66,8 @@
         for (const [key, s] of Object.entries(sliders)) {
             o[key] = parseInt(s.el.value);
         }
+        // timeOffset slider is in tenths of seconds; convert to seconds
+        if (o.timeOffset != null) o.timeOffset = o.timeOffset / 10;
         for (const [key, el] of Object.entries(checks)) {
             o[key] = el.checked;
         }
@@ -92,7 +94,9 @@
 
     function loadSavedSettings() {
         chrome.storage.local.get(['srt_popup_settings'], (data) => {
-            const s = data.srt_popup_settings || DEFAULTS;
+            const s = { ...DEFAULTS, ...(data.srt_popup_settings || {}) };
+            // convert timeOffset from seconds back to slider raw value
+            if (s.timeOffset != null) s.timeOffset = Math.round(s.timeOffset * 10);
             applyToControls(s);
         });
     }

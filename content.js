@@ -66,7 +66,7 @@
                 settings = { ...settings, ...req.settings };
                 SubtitleSettings.saveSettings(settings);
                 if (req.settings.timeOffset != null) {
-                    engine?.setTimeOffset(req.settings.timeOffset / 10);
+                    engine?.setTimeOffset(req.settings.timeOffset);
                 }
                 applyAllStyles();
                 break;
@@ -102,6 +102,7 @@
                 openSubtitlePiP();
                 break;
         }
+        return true; // keep sendResponse channel open
     }
 
     // =================== 字幕加载 ===================
@@ -533,20 +534,18 @@
             case 'fontSize':
             case 'bottomPos':
             case 'bgOpacity':
+            case 'bgPadding':
             case 'textStroke':
             case 'strokeWidth':
             case 'textShadow':
             case 'shadowDistance':
             case 'fontFamily':
+            case 'autoScale':
                 applyAllStyles();
                 break;
 
             case 'timeOffset':
                 engine?.setTimeOffset(value);
-                break;
-
-            case 'autoScale':
-                // 无需实时操作，resize 事件中检查
                 break;
         }
     }
@@ -558,12 +557,13 @@
     }
 
     function settingsToOverlayConfig() {
+        const baseWidth = settings.autoScaleBaseWidth || SubtitleOverlay.DEFAULT_STYLE.autoScaleBaseWidth || 500;
         const base = {
-            fontSize: settings.fontSize || 16,
+            fontSize: settings.fontSize != null ? settings.fontSize : 16,
             fontFamily: settings.fontFamily || SubtitleOverlay.DEFAULT_STYLE.fontFamily,
             fontColor: '#ffffff',
             fontWeight: 600,
-            bottomPos: settings.bottomPos || 12,
+            bottomPos: settings.bottomPos != null ? settings.bottomPos : 12,
             bgColor: '#000000',
             bgOpacity: (settings.bgOpacity != null ? settings.bgOpacity : 30) / 100,
             bgPadding: settings.bgPadding != null ? settings.bgPadding : 8,
@@ -575,13 +575,13 @@
             customFontData: settings.customFontData || null,
             borderRadius: 4,
             autoScale: settings.autoScale !== false,
-            autoScaleBaseWidth: 800,
+            autoScaleBaseWidth: baseWidth,
         };
 
         // 分辨率自适应：根据视频/窗口宽度缩放字号
         if (base.autoScale && currentVideo) {
             const w = currentVideo.clientWidth || window.innerWidth;
-            const scale = Math.max(0.6, Math.min(2.5, w / base.autoScaleBaseWidth));
+            const scale = Math.max(0.6, Math.min(2.5, w / baseWidth));
             base.fontSize = Math.round(base.fontSize * scale);
             base.bottomPos = Math.round(base.bottomPos * scale);
             base.bgPadding = Math.round(base.bgPadding * scale);
