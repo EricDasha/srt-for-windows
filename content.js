@@ -1,9 +1,5 @@
 /**
  * content.js - 主入口脚本
- * AnySub 字幕挂载 for PiP
- * 自主创作，完全独立实现
- *
- * 依赖模块（通过 manifest content_scripts 顺序加载）：
  * - subtitleParser.js
  * - subtitleEngine.js
  * - subtitleOverlay.js
@@ -14,7 +10,7 @@
     'use strict';
 
     const VERSION = '2.0.0';
-    console.log(`【AnySub】V${VERSION} 字幕挂载已加载`);
+    console.log(`字幕挂载已加载`);
 
     // =================== 全局状态 ===================
 
@@ -48,6 +44,13 @@
 
         // 监听视频元素的原生 PiP（非 documentPiP）
         setupNativePiPDetection();
+
+        // 窗口大小变化时重新计算自适应字号
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => applyAllStyles(), 200);
+        });
     }
 
     // =================== 消息处理 ===================
@@ -62,7 +65,28 @@
             case 'updateSettings':
                 settings = { ...settings, ...req.settings };
                 SubtitleSettings.saveSettings(settings);
+                if (req.settings.timeOffset != null) {
+                    engine?.setTimeOffset(req.settings.timeOffset / 10);
+                }
                 applyAllStyles();
+                break;
+
+            case 'removeOverlay':
+                if (engine) { engine.destroy(); engine = null; }
+                if (pageOverlay) { pageOverlay.destroy(); pageOverlay = null; }
+                if (pipOverlay) { pipOverlay.destroy(); pipOverlay = null; }
+                currentSubtitles = [];
+                currentFileName = null;
+                chrome.storage.local.remove(['lastFileName', 'lastCount']);
+                sendResponse({ status: 'ok' });
+                break;
+
+            case 'resetSettings':
+                settings = {};
+                SubtitleSettings.saveSettings(settings);
+                chrome.storage.local.remove(['srt_popup_settings']);
+                applyAllStyles();
+                sendResponse({ status: 'ok' });
                 break;
 
             case 'getStatus':
@@ -96,7 +120,7 @@
         }
 
         if (!currentVideo) {
-            console.warn('【AnySub】未找到视频元素');
+            console.warn('未找到视频元素');
             return;
         }
 
@@ -137,11 +161,11 @@
             try {
                 documentPictureInPicture.addEventListener('enter', (event) => {
                     const pipWin = event.window;
-                    console.log('【AnySub】检测到 Document PiP 打开');
+                    console.log('检测到 Document PiP 打开');
                     injectIntoPiPWindow(pipWin);
                 });
             } catch (e) {
-                console.log('【AnySub】documentPictureInPicture 事件监听失败:', e);
+                console.log('documentPictureInPicture 事件监听失败:', e);
             }
         }
 
@@ -152,7 +176,7 @@
                 const win = documentPictureInPicture.window;
                 if (win !== lastPipWin) {
                     lastPipWin = win;
-                    console.log('【AnySub】轮询检测到 Document PiP');
+                    console.log('轮询检测到 Document PiP');
                     injectIntoPiPWindow(win);
                 }
             } else {
@@ -164,7 +188,7 @@
     function setupNativePiPDetection() {
         // 监听原生 PiP（video.requestPictureInPicture）
         document.addEventListener('enterpictureinpicture', (e) => {
-            console.log('【AnySub】检测到原生 PiP');
+            console.log('检测到原生 PiP');
             // 原生 PiP 不提供 window，但我们可以在页面上显示字幕
             const video = e.target;
             if (video instanceof HTMLVideoElement) {
@@ -176,7 +200,7 @@
         });
 
         document.addEventListener('leavepictureinpicture', () => {
-            console.log('【AnySub】原生 PiP 已关闭');
+            console.log('原生 PiP 已关闭');
         });
     }
 
@@ -194,7 +218,7 @@
 
         // 等待 PiP 窗口 DOM 加载完成
         const doInject = () => {
-            console.log('【AnySub】正在注入到 PiP 窗口');
+            console.log('正在注入到 PiP 窗口');
 
             // 1. 创建字幕悬浮按钮（控制栏）
             pipControlBar = createPiPControlBar(doc);
@@ -221,7 +245,7 @@
             // 6. 自定义字体注入
             if (settings.customFontData) {
                 const fontStyle = doc.createElement('style');
-                fontStyle.textContent = `@font-face { font-family: 'AnySubCustomFont'; src: url('${settings.customFontData}'); font-display: swap; }`;
+                fontStyle.textContent = `@font-face { font-family: 'SRTCustomFont'; src: url('${settings.customFontData}'); font-display: swap; }`;
                 doc.head.appendChild(fontStyle);
             }
         };
@@ -235,7 +259,7 @@
 
         // 监听 PiP 窗口关闭
         win.addEventListener('pagehide', () => {
-            console.log('【AnySub】PiP 窗口已关闭');
+            console.log('PiP 窗口已关闭');
             pipWindow = null;
             pipOverlay = null;
             pipSettingsPanel = null;
@@ -265,7 +289,7 @@
     function createPiPControlBar(doc) {
         const style = doc.createElement('style');
         style.textContent = `
-            #anysub-control-bar {
+            #srt-control-bar {
                 position: fixed;
                 top: 0; right: 0;
                 display: flex;
@@ -276,12 +300,12 @@
                 transition: opacity 0.3s ease;
                 pointer-events: none;
             }
-            body:hover #anysub-control-bar,
-            #anysub-control-bar:hover {
+            body:hover #srt-control-bar,
+            #srt-control-bar:hover {
                 opacity: 1;
                 pointer-events: auto;
             }
-            .anysub-pip-btn {
+            .srt-pip-btn {
                 background: rgba(0,0,0,0.55);
                 backdrop-filter: blur(8px);
                 border: 1px solid rgba(255,255,255,0.12);
@@ -297,18 +321,18 @@
                 align-items: center;
                 gap: 4px;
             }
-            .anysub-pip-btn:hover {
+            .srt-pip-btn:hover {
                 background: rgba(79, 195, 247, 0.3);
                 border-color: rgba(79, 195, 247, 0.4);
                 color: #fff;
             }
-            .anysub-pip-btn:active {
+            .srt-pip-btn:active {
                 transform: scale(0.95);
             }
-            .anysub-pip-btn .icon {
+            .srt-pip-btn .icon {
                 font-size: 14px;
             }
-            #anysub-pip-notification {
+            #srt-pip-notification {
                 position: fixed;
                 top: 10px;
                 left: 50%;
@@ -325,7 +349,7 @@
                 opacity: 0;
                 pointer-events: none;
             }
-            #anysub-pip-notification.show {
+            #srt-pip-notification.show {
                 transform: translateX(-50%) translateY(0);
                 opacity: 1;
             }
@@ -334,13 +358,13 @@
 
         // 控制栏
         const bar = doc.createElement('div');
-        bar.id = 'anysub-control-bar';
+        bar.id = 'srt-control-bar';
         bar.innerHTML = `
-            <button class="anysub-pip-btn" id="anysub-btn-import" title="导入字幕文件">
+            <button class="srt-pip-btn" id="srt-btn-import" title="导入字幕文件">
                 <span class="icon">📂</span>
                 <span>字幕</span>
             </button>
-            <button class="anysub-pip-btn" id="anysub-btn-settings" title="字幕设置">
+            <button class="srt-pip-btn" id="srt-btn-settings" title="字幕设置">
                 <span class="icon">⚙️</span>
             </button>
         `;
@@ -348,15 +372,15 @@
 
         // 通知元素
         const notification = doc.createElement('div');
-        notification.id = 'anysub-pip-notification';
+        notification.id = 'srt-pip-notification';
         doc.body.appendChild(notification);
 
         // 绑定事件
-        doc.getElementById('anysub-btn-import')?.addEventListener('click', () => {
+        doc.getElementById('srt-btn-import')?.addEventListener('click', () => {
             triggerFileImport(doc);
         });
 
-        doc.getElementById('anysub-btn-settings')?.addEventListener('click', () => {
+        doc.getElementById('srt-btn-settings')?.addEventListener('click', () => {
             pipSettingsPanel?.toggle();
         });
 
@@ -455,7 +479,7 @@
             }
 
         } catch (err) {
-            console.error('【AnySub】字幕导入失败:', err);
+            console.error('字幕导入失败:', err);
             pipDragOverlay?.showError(err.message);
             showPiPNotification('❌ ' + err.message);
         }
@@ -496,7 +520,7 @@
             injectIntoPiPWindow(win);
 
         } catch (err) {
-            console.error('【AnySub】打开 PiP 失败:', err);
+            console.error('打开 PiP 失败:', err);
         }
     }
 
@@ -534,23 +558,36 @@
     }
 
     function settingsToOverlayConfig() {
-        return {
-            fontSize: settings.fontSize || 28,
+        const base = {
+            fontSize: settings.fontSize || 16,
             fontFamily: settings.fontFamily || SubtitleOverlay.DEFAULT_STYLE.fontFamily,
             fontColor: '#ffffff',
-            fontWeight: 700,
-            bottomPos: settings.bottomPos || 60,
+            fontWeight: 600,
+            bottomPos: settings.bottomPos || 12,
             bgColor: '#000000',
-            bgOpacity: (settings.bgOpacity || 65) / 100,
-            bgPadding: settings.bgPadding || 10,
+            bgOpacity: (settings.bgOpacity != null ? settings.bgOpacity : 30) / 100,
+            bgPadding: settings.bgPadding != null ? settings.bgPadding : 8,
             textStroke: !!settings.textStroke,
             strokeWidth: settings.strokeWidth || 2,
-            textShadow: settings.textShadow !== false,
+            textShadow: !!settings.textShadow,
             shadowDistance: settings.shadowDistance || 2,
             shadowBlur: 4,
             customFontData: settings.customFontData || null,
-            borderRadius: 8,
+            borderRadius: 4,
+            autoScale: settings.autoScale !== false,
+            autoScaleBaseWidth: 800,
         };
+
+        // 分辨率自适应：根据视频/窗口宽度缩放字号
+        if (base.autoScale && currentVideo) {
+            const w = currentVideo.clientWidth || window.innerWidth;
+            const scale = Math.max(0.6, Math.min(2.5, w / base.autoScaleBaseWidth));
+            base.fontSize = Math.round(base.fontSize * scale);
+            base.bottomPos = Math.round(base.bottomPos * scale);
+            base.bgPadding = Math.round(base.bgPadding * scale);
+        }
+
+        return base;
     }
 
     // =================== UI 辅助 ===================
@@ -576,7 +613,7 @@
     let pipNotifyTimer = null;
     function showPiPNotification(msg) {
         if (!pipWindow || pipWindow.closed) return;
-        const notif = pipWindow.document.getElementById('anysub-pip-notification');
+        const notif = pipWindow.document.getElementById('srt-pip-notification');
         if (!notif) return;
         notif.textContent = msg;
         notif.classList.add('show');
@@ -597,7 +634,7 @@
             if (newVideo && newVideo !== currentVideo) {
                 currentVideo = newVideo;
                 engine.updateVideoEl(currentVideo);
-                console.log('【AnySub】视频元素已更新');
+                console.log('视频元素已更新');
             }
         }
     }, 2000);

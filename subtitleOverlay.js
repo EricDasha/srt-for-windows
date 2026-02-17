@@ -1,7 +1,6 @@
 /**
  * subtitleOverlay.js - 字幕覆盖层 UI
  * 负责在页面和 PiP 窗口中显示字幕
- * 自主创作，独立实现
  */
 
 const SubtitleOverlay = (() => {
@@ -11,23 +10,23 @@ const SubtitleOverlay = (() => {
      * 默认样式配置
      */
     const DEFAULT_STYLE = {
-        fontSize: 28,
-        fontFamily: "'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif",
+        fontSize: 16,
+        fontFamily: "arial, 'Microsoft YaHei', 'PingFang SC', helvetica, sans-serif",
         fontColor: '#ffffff',
-        fontWeight: 700,
-        bottomPos: 60,
+        fontWeight: 600,
+        bottomPos: 12,
         bgColor: '#000000',
-        bgOpacity: 0.65,
-        bgPadding: 10,
+        bgOpacity: 0.3,
+        bgPadding: 8,
         textStroke: false,
         strokeWidth: 2,
-        textShadow: true,
+        textShadow: false,
         shadowDistance: 2,
         shadowBlur: 4,
-        autoScale: false,
-        autoScaleBaseWidth: 600,
+        autoScale: true,
+        autoScaleBaseWidth: 500,
         customFontData: null,
-        borderRadius: 8,
+        borderRadius: 4,
     };
 
     /**
@@ -37,12 +36,12 @@ const SubtitleOverlay = (() => {
         const style = { ...DEFAULT_STYLE, ...config };
 
         // 移除旧的覆盖层
-        const old = document.getElementById('anysub-overlay-host');
+        const old = document.getElementById('srt-overlay-host');
         if (old) old.remove();
 
         // 创建宿主元素
         const host = document.createElement('div');
-        host.id = 'anysub-overlay-host';
+        host.id = 'srt-overlay-host';
         Object.assign(host.style, {
             position: 'fixed',
             top: '0',
@@ -280,10 +279,10 @@ const SubtitleOverlay = (() => {
             ? `text-shadow: 0 0 ${s.shadowBlur}px rgba(0,0,0,0.9), ${s.shadowDistance}px ${s.shadowDistance}px ${s.shadowBlur}px rgba(0,0,0,0.7), -1px -1px ${s.shadowBlur}px rgba(0,0,0,0.5);`
             : 'text-shadow: none;';
         const fontFamily = s.customFontData
-            ? `@font-face { font-family: 'AnySubCustomFont'; src: url('${s.customFontData}'); font-display: swap; }\n`
+            ? `@font-face { font-family: 'SRTCustomFont'; src: url('${s.customFontData}'); font-display: swap; }\n`
             : '';
         const fontFamilyValue = s.customFontData
-            ? "'AnySubCustomFont', " + s.fontFamily
+            ? "'SRTCustomFont', " + s.fontFamily
             : s.fontFamily;
 
         return `
@@ -340,7 +339,7 @@ const SubtitleOverlay = (() => {
             ? `text-shadow: 0 0 ${s.shadowBlur}px rgba(0,0,0,0.9), ${s.shadowDistance}px ${s.shadowDistance}px ${s.shadowBlur}px rgba(0,0,0,0.7);`
             : '';
         const fontFamilyValue = s.customFontData
-            ? "'AnySubCustomFont', " + s.fontFamily
+            ? "'SRTCustomFont', " + s.fontFamily
             : s.fontFamily;
 
         return `

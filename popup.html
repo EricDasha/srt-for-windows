@@ -1,21 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnySub - 字幕挂载</title>
+    <title>SRT for Windows</title>
     <style>
         :root {
-            --bg-primary: #0f0f14;
-            --bg-secondary: #16161d;
-            --bg-hover: #1e1e28;
-            --text-primary: #e8e8ef;
-            --text-secondary: #8888a0;
-            --accent: #4fc3f7;
-            --accent-hover: #81d4fa;
-            --success: #66bb6a;
-            --error: #ef5350;
-            --border: rgba(255,255,255,0.06);
+            --surface: #ffffff;
+            --surface-alt: #f5f5f5;
+            --border: #d0d0d0;
+            --text: #222;
+            --text-sec: #888;
+            --accent: #1a73e8;
+            --danger: #c62828;
+            --safe: #2e7d32;
         }
 
         * {
@@ -25,269 +24,374 @@
         }
 
         body {
-            width: 340px;
-            min-height: 200px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
-            font-size: 13px;
+            width: 380px;
+            font: 12px/1.5 'Segoe UI', Tahoma, sans-serif;
+            color: var(--text);
+            background: var(--surface);
             overflow-x: hidden;
         }
 
-        /* Header */
-        .header {
-            padding: 16px 18px 12px;
-            border-bottom: 1px solid var(--border);
+        /* ---- header ---- */
+        .titlebar {
             display: flex;
             align-items: center;
-            gap: 10px;
-        }
-        .header img {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-        }
-        .header-text h1 {
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-        .header-text .version {
-            font-size: 11px;
-            color: var(--text-secondary);
-            font-family: 'SF Mono', 'Consolas', monospace;
+            gap: 8px;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            user-select: none;
         }
 
-        /* Main Content */
-        .content {
-            padding: 14px 18px;
+        .titlebar img {
+            width: 20px;
+            height: 20px;
         }
 
-        /* Status Card */
-        .status-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 14px;
-        }
-        .status-label {
-            font-size: 11px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 6px;
-        }
-        .status-value {
-            font-size: 14px;
+        .titlebar h1 {
+            font-size: 13px;
             font-weight: 600;
-            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .titlebar .ver {
+            font-size: 10px;
+            color: var(--text-sec);
+        }
+
+        /* ---- section ---- */
+        .section {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-label {
+            font-size: 10px;
+            color: var(--text-sec);
+            margin-bottom: 4px;
+        }
+
+        /* ---- status ---- */
+        .status-file {
+            font-weight: 500;
             word-break: break-all;
         }
-        .status-value.empty {
-            color: var(--text-secondary);
+
+        .status-file.none {
+            color: var(--text-sec);
             font-weight: 400;
-            font-style: italic;
         }
+
         .status-count {
             font-size: 11px;
             color: var(--accent);
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
-        /* File Drop Zone */
-        .drop-zone {
-            border: 2px dashed rgba(79, 195, 247, 0.25);
-            border-radius: 10px;
-            padding: 22px 16px;
+        /* ---- dropzone ---- */
+        .dropzone {
+            border: 1px dashed var(--border);
+            padding: 14px 10px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.25s;
-            margin-bottom: 14px;
-            background: rgba(79, 195, 247, 0.03);
         }
-        .drop-zone:hover {
-            border-color: rgba(79, 195, 247, 0.5);
-            background: rgba(79, 195, 247, 0.06);
-        }
-        .drop-zone.dragover {
+
+        .dropzone:hover {
             border-color: var(--accent);
-            background: rgba(79, 195, 247, 0.12);
-            transform: scale(1.01);
+            background: #f0f6ff;
         }
-        .drop-zone-icon {
-            font-size: 28px;
+
+        .dropzone.over {
+            border-color: var(--accent);
+            background: #e3f0ff;
+        }
+
+        .dropzone-main {
+            font-weight: 500;
+        }
+
+        .dropzone-hint {
+            font-size: 10px;
+            color: var(--text-sec);
+            margin-top: 2px;
+        }
+
+        /* ---- encoding row ---- */
+        .enc-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .enc-row label {
+            font-size: 11px;
+            color: var(--text-sec);
+        }
+
+        .enc-row select {
+            flex: 1;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            padding: 3px 6px;
+            font: inherit;
+            outline: none;
+        }
+
+        .enc-row select:focus {
+            border-color: var(--accent);
+        }
+
+        /* ---- settings panel ---- */
+        .settings-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .settings-toggle:hover {
+            background: var(--surface-alt);
+        }
+
+        .settings-toggle .arrow {
+            font-size: 10px;
+        }
+
+        .settings-toggle.open .arrow {
+            transform: rotate(180deg);
+        }
+
+        .settings-body {
+            display: none;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .settings-body.open {
+            display: block;
+        }
+
+        .settings-body-inner {
+            padding: 8px 12px;
+        }
+
+        .s-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             margin-bottom: 6px;
         }
-        .drop-zone-text {
-            font-weight: 600;
-            color: var(--accent);
-            margin-bottom: 2px;
-        }
-        .drop-zone-hint {
-            font-size: 11px;
-            color: var(--text-secondary);
+
+        .s-row:last-child {
+            margin-bottom: 0;
         }
 
-        /* Buttons */
-        .btn-row {
-            display: flex;
-            gap: 8px;
+        .s-label {
+            width: 52px;
+            font-size: 11px;
+            color: var(--text-sec);
+            flex-shrink: 0;
         }
-        .btn {
+
+        .s-row input[type=range] {
             flex: 1;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            font-size: 12px;
-            font-weight: 600;
+            height: 4px;
+        }
+
+        .s-val {
+            width: 30px;
+            font-size: 11px;
+            text-align: right;
+            color: var(--text);
+        }
+
+        .s-check-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .s-check-row label {
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
             cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
+            color: var(--text-sec);
+        }
+
+
+
+
+        /* ---- bottom toolbar ---- */
+        .toolbar {
+            display: flex;
+            height: 36px;
+            background: var(--surface-alt);
+            border-top: 1px solid var(--border);
+            user-select: none;
+        }
+
+        .toolbar-btn {
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
-        }
-        .btn:hover {
-            background: var(--bg-hover);
-            border-color: rgba(255,255,255,0.12);
-        }
-        .btn:active {
-            transform: scale(0.97);
-        }
-        .btn-accent {
-            background: rgba(79, 195, 247, 0.12);
-            border-color: rgba(79, 195, 247, 0.25);
-            color: var(--accent);
-        }
-        .btn-accent:hover {
-            background: rgba(79, 195, 247, 0.2);
-        }
-
-        /* Notification */
-        .notification {
-            position: fixed;
-            top: 8px; left: 18px; right: 18px;
-            background: var(--success);
-            color: #fff;
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            text-align: center;
-            transform: translateY(-80px);
-            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-            z-index: 100;
-        }
-        .notification.show {
-            transform: translateY(0);
-        }
-        .notification.error {
-            background: var(--error);
-        }
-
-        /* Footer */
-        .footer {
-            padding: 10px 18px;
-            border-top: 1px solid var(--border);
-            text-align: center;
-            font-size: 10px;
-            color: var(--text-secondary);
-        }
-
-        /* Hidden file input */
-        #fileInput {
-            display: none;
-        }
-
-        /* Encoding selector */
-        .encoding-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 14px;
-        }
-        .encoding-row label {
-            font-size: 11px;
-            color: var(--text-secondary);
-        }
-        .encoding-row select {
-            flex: 1;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 5px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            outline: none;
+            gap: 4px;
+            background: none;
+            border: none;
             cursor: pointer;
+            font: inherit;
+            font-size: 11px;
+            color: var(--text);
+            padding: 0 4px;
         }
-        .encoding-row select:focus {
-            border-color: var(--accent);
+
+        .toolbar-btn:hover {
+            background: #e8e8e8;
+        }
+
+
+        .toolbar-btn.danger:hover {
+            color: var(--danger);
+        }
+
+        .toolbar-sep {
+            width: 1px;
+            background: var(--border);
+        }
+
+        /* ---- notification ---- */
+        .toast {
+            position: fixed;
+            bottom: 42px;
+            left: 12px;
+            right: 12px;
+            background: rgba(0, 0, 0, .78);
+            color: #fafafa;
+            padding: 6px 10px;
+            font-size: 11px;
+            text-align: center;
+            display: none;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        .toast.err {
+            background: var(--danger);
+        }
+
+        #fileIn {
+            display: none;
         }
     </style>
 </head>
+
 <body>
-    <div class="header">
-        <img src="logo.png" alt="AnySub">
-        <div class="header-text">
-            <h1>AnySub</h1>
-            <div class="version">v2.0.0</div>
+    <!-- titlebar -->
+    <div class="titlebar">
+        <img src="logo.png" alt="">
+        <h1>SRT for Windows</h1>
+        <span class="ver">v2.0.0</span>
+    </div>
+
+    <!-- status -->
+    <div class="section">
+        <div class="section-label">当前字幕</div>
+        <div class="status-file none" id="stFile">未加载</div>
+        <div class="status-count" id="stCount" style="display:none"></div>
+    </div>
+
+    <!-- dropzone -->
+    <div class="section">
+        <div class="dropzone" id="drop">
+            <div class="dropzone-main">点击选择 或 拖入字幕文件</div>
+            <div class="dropzone-hint">.srt / .ass / .ssa / .vtt</div>
         </div>
     </div>
 
-    <div class="content">
-        <!-- Status Card -->
-        <div class="status-card">
-            <div class="status-label">当前字幕</div>
-            <div class="status-value empty" id="statusFileName">未加载字幕文件</div>
-            <div class="status-count" id="statusCount" style="display:none"></div>
-        </div>
+    <!-- encoding -->
+    <div class="enc-row">
+        <label>编码</label>
+        <select id="enc">
+            <option value="auto">自动检测</option>
+            <option value="utf-8">UTF-8</option>
+            <option value="gbk">GBK</option>
+            <option value="big5">Big5</option>
+            <option value="shift_jis">Shift-JIS</option>
+            <option value="euc-kr">EUC-KR</option>
+        </select>
+    </div>
 
-        <!-- Drop Zone -->
-        <div class="drop-zone" id="dropZone">
-            <div class="drop-zone-icon">📂</div>
-            <div class="drop-zone-text">点击选择 或 拖入字幕文件</div>
-            <div class="drop-zone-hint">.srt / .ass / .ssa / .vtt</div>
-        </div>
+    <!-- settings toggle -->
+    <div class="settings-toggle" id="settingsToggle">
+        <span>字幕样式设置</span>
+        <span class="arrow">▼</span>
+    </div>
 
-        <!-- Encoding -->
-        <div class="encoding-row">
-            <label>编码:</label>
-            <select id="encodingSelect">
-                <option value="auto">自动检测</option>
-                <option value="utf-8">UTF-8</option>
-                <option value="gbk">GBK (简体中文)</option>
-                <option value="big5">Big5 (繁体中文)</option>
-                <option value="shift_jis">Shift-JIS (日文)</option>
-                <option value="euc-kr">EUC-KR (韩文)</option>
-            </select>
-        </div>
-
-        <!-- Buttons -->
-        <div class="btn-row">
-            <button class="btn btn-accent" id="btnOpenPip">
-                <span>🖼</span> PiP 字幕窗
-            </button>
-            <button class="btn" id="btnRefresh">
-                <span>🔄</span> 刷新状态
-            </button>
+    <!-- settings body -->
+    <div class="settings-body" id="settingsBody">
+        <div class="settings-body-inner">
+            <div class="s-row">
+                <span class="s-label">字号</span>
+                <input type="range" id="sFontSize" min="12" max="48" value="16">
+                <span class="s-val" id="vFontSize">16</span>
+            </div>
+            <div class="s-row">
+                <span class="s-label">位置</span>
+                <input type="range" id="sBottom" min="0" max="200" value="12">
+                <span class="s-val" id="vBottom">12</span>
+            </div>
+            <div class="s-row">
+                <span class="s-label">背景</span>
+                <input type="range" id="sBgOp" min="0" max="100" value="30">
+                <span class="s-val" id="vBgOp">30%</span>
+            </div>
+            <div class="s-row">
+                <span class="s-label">留白</span>
+                <input type="range" id="sPad" min="0" max="30" value="8">
+                <span class="s-val" id="vPad">8</span>
+            </div>
+            <div class="s-row">
+                <span class="s-label">偏移</span>
+                <input type="range" id="sOffset" min="-100" max="100" value="0" step="5">
+                <span class="s-val" id="vOffset">0.0s</span>
+            </div>
+            <div class="s-check-row">
+                <label><input type="checkbox" id="cStroke"> 描边</label>
+                <label><input type="checkbox" id="cShadow"> 阴影</label>
+                <label><input type="checkbox" id="cScale" checked> 自适应</label>
+            </div>
         </div>
     </div>
 
-    <div class="footer">
-        AnySub — 为任何视频挂载字幕
+    <!-- bottom toolbar -->
+    <div class="toolbar">
+        <button class="toolbar-btn" id="tbPip" title="打开 PiP 字幕窗">🖼 PiP</button>
+        <div class="toolbar-sep"></div>
+        <button class="toolbar-btn danger" id="tbClose" title="关闭当前字幕">✕ 关闭</button>
+        <div class="toolbar-sep"></div>
+        <button class="toolbar-btn" id="tbReset" title="恢复默认设置">↺ 默认</button>
+        <div class="toolbar-sep"></div>
+        <button class="toolbar-btn" id="tbRefresh" title="刷新状态">⟳</button>
     </div>
 
-    <!-- Notification -->
-    <div class="notification" id="notification"></div>
+    <!-- toast -->
+    <div class="toast" id="toast"></div>
 
-    <input type="file" id="fileInput" accept=".srt,.ass,.ssa,.vtt">
-
+    <input type="file" id="fileIn" accept=".srt,.ass,.ssa,.vtt">
     <script src="subtitleParser.js"></script>
     <script src="popup.js"></script>
 </body>
+
 </html>

@@ -1,7 +1,6 @@
 /**
  * subtitleEngine.js - 字幕同步引擎
  * 负责将字幕与视频播放状态实时同步
- * 自主创作，独立实现
  */
 
 const SubtitleEngine = (() => {

@@ -1,28 +1,27 @@
 /**
  * subtitleSettings.js - PiP 内嵌字幕设置面板
- * 自主创作，独立实现
  */
 
 const SubtitleSettings = (() => {
     'use strict';
 
-    const STORAGE_KEY = 'anysub_settings';
+    const STORAGE_KEY = 'srt_settings';
 
     /**
      * 默认设置项
      */
     const DEFAULTS = {
-        fontSize: 28,
-        bottomPos: 60,
-        bgOpacity: 65,       // 百分比 0-100
-        bgPadding: 10,
+        fontSize: 16,
+        bottomPos: 12,
+        bgOpacity: 30,       // 百分比 0-100
+        bgPadding: 8,
         timeOffset: 0,
         fontFamily: 'sans-serif',
         textStroke: false,
-        textShadow: true,
+        textShadow: false,
         strokeWidth: 2,
         shadowDistance: 2,
-        autoScale: false,
+        autoScale: true,
         customFontData: null,
         language: 'zh',
     };
@@ -72,7 +71,7 @@ const SubtitleSettings = (() => {
         // 注入样式
         const style = doc.createElement('style');
         style.textContent = `
-            #anysub-settings-panel {
+            #srt-settings-panel {
                 position: fixed;
                 bottom: 0; left: 0;
                 width: 100%;
@@ -90,16 +89,16 @@ const SubtitleSettings = (() => {
                 scrollbar-width: thin;
                 scrollbar-color: rgba(255,255,255,0.2) transparent;
             }
-            #anysub-settings-panel.visible {
+            #srt-settings-panel.visible {
                 transform: translateY(0);
             }
-            #anysub-settings-panel::-webkit-scrollbar {
+            #srt-settings-panel::-webkit-scrollbar {
                 width: 4px;
             }
-            #anysub-settings-panel::-webkit-scrollbar-track {
+            #srt-settings-panel::-webkit-scrollbar-track {
                 background: transparent;
             }
-            #anysub-settings-panel::-webkit-scrollbar-thumb {
+            #srt-settings-panel::-webkit-scrollbar-thumb {
                 background: rgba(255,255,255,0.2);
                 border-radius: 2px;
             }
@@ -228,7 +227,7 @@ const SubtitleSettings = (() => {
 
         // 创建面板
         const panel = doc.createElement('div');
-        panel.id = 'anysub-settings-panel';
+        panel.id = 'srt-settings-panel';
 
         const emit = (key, value) => {
             settings[key] = value;

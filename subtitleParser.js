@@ -1,7 +1,6 @@
 /**
  * subtitleParser.js - 字幕文件解析模块
  * 支持 SRT / ASS(SSA) / VTT 格式
- * 自主创作，独立实现
  */
 
 const SubtitleParser = (() => {

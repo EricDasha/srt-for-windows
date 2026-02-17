@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>AnySub PiP</title>
+    <title>SRT PiP</title>
     <style>
         body {
             margin: 0;
@@ -26,7 +27,7 @@
             padding: 20px;
             box-sizing: border-box;
             font-weight: bold;
-            text-shadow: 0 0 4px rgba(0,0,0,0.8);
+            text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
             white-space: pre-wrap;
             transition: font-size 0.1s;
         }
@@ -62,7 +63,7 @@
             left: 0;
             width: 100%;
             padding: 10px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
             opacity: 0;
             transition: opacity 0.3s;
             display: flex;
@@ -77,16 +78,17 @@
         }
 
         .pip-btn {
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.4);
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             color: #fff;
             padding: 4px 8px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 12px;
         }
+
         .pip-btn:hover {
-            background: rgba(255,255,255,0.4);
+            background: rgba(255, 255, 255, 0.4);
         }
 
         #settings-panel {
@@ -94,7 +96,7 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0, 0, 0, 0.9);
             padding: 15px;
             box-sizing: border-box;
             transform: translateY(100%);
@@ -113,13 +115,16 @@
             margin-bottom: 10px;
             font-size: 13px;
         }
+
         .setting-row label {
             width: 80px;
             color: #aaa;
         }
+
         .setting-row input[type="range"] {
             flex: 1;
         }
+
         .setting-row .val {
             width: 30px;
             text-align: right;
@@ -133,16 +138,19 @@
             color: #aaa;
             font-size: 12px;
         }
-        .close-settings:hover { color: #fff; }
 
+        .close-settings:hover {
+            color: #fff;
+        }
     </style>
 </head>
+
 <body>
 
     <div id="drag-overlay">Drop Subtitle Here (.srt/.ass)</div>
 
     <div id="pip-controls">
-        <div style="font-size:12px; opacity:0.7">AnySub PiP</div>
+        <div style="font-size:12px; opacity:0.7">SRT PiP</div>
         <button id="btn-toggle-settings" class="pip-btn">Settings</button>
     </div>
 
@@ -172,4 +180,5 @@
     </div>
 
 </body>
+
 </html>

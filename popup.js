@@ -1,188 +1,238 @@
 /**
- * popup.js - Popup 页面逻辑
- * AnySub 字幕挂载
- * 自主创作，独立实现
+ * popup.js
  */
-
 (function () {
     'use strict';
 
-    // =================== DOM 引用 ===================
-
     const $ = (id) => document.getElementById(id);
-    const dropZone = $('dropZone');
-    const fileInput = $('fileInput');
-    const statusFileName = $('statusFileName');
-    const statusCount = $('statusCount');
-    const btnOpenPip = $('btnOpenPip');
-    const btnRefresh = $('btnRefresh');
-    const notification = $('notification');
-    const encodingSelect = $('encodingSelect');
 
-    // =================== 初始化 ===================
+    // DOM refs
+    const drop = $('drop');
+    const fileIn = $('fileIn');
+    const stFile = $('stFile');
+    const stCount = $('stCount');
+    const enc = $('enc');
+    const toast = $('toast');
 
+    // settings controls
+    const settingsToggle = $('settingsToggle');
+    const settingsBody = $('settingsBody');
+
+    const sliders = {
+        fontSize: { el: $('sFontSize'), val: $('vFontSize'), fmt: v => v },
+        bottomPos: { el: $('sBottom'), val: $('vBottom'), fmt: v => v },
+        bgOpacity: { el: $('sBgOp'), val: $('vBgOp'), fmt: v => v + '%' },
+        bgPadding: { el: $('sPad'), val: $('vPad'), fmt: v => v },
+        timeOffset: { el: $('sOffset'), val: $('vOffset'), fmt: v => (v / 10).toFixed(1) + 's' },
+    };
+    const checks = {
+        textStroke: $('cStroke'),
+        textShadow: $('cShadow'),
+        autoScale: $('cScale'),
+    };
+
+    const DEFAULTS = {
+        fontSize: 16, bottomPos: 12, bgOpacity: 30,
+        bgPadding: 8, timeOffset: 0,
+        textStroke: false, textShadow: false, autoScale: true,
+    };
+
+    // ---- init ----
+    loadSavedSettings();
     refreshStatus();
 
-    // =================== 文件导入 ===================
-
-    // 点击选择文件
-    dropZone.addEventListener('click', () => {
-        fileInput.click();
+    // ---- settings toggle ----
+    settingsToggle.addEventListener('click', () => {
+        settingsToggle.classList.toggle('open');
+        settingsBody.classList.toggle('open');
     });
 
-    fileInput.addEventListener('change', async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        await loadFile(file);
+    // ---- slider events ----
+    for (const [key, s] of Object.entries(sliders)) {
+        s.el.addEventListener('input', () => {
+            const v = parseInt(s.el.value);
+            s.val.textContent = s.fmt(v);
+            pushSettings();
+        });
+    }
+
+    // ---- checkbox events ----
+    for (const [key, el] of Object.entries(checks)) {
+        el.addEventListener('change', () => pushSettings());
+    }
+
+    function gatherSettings() {
+        const o = {};
+        for (const [key, s] of Object.entries(sliders)) {
+            o[key] = parseInt(s.el.value);
+        }
+        for (const [key, el] of Object.entries(checks)) {
+            o[key] = el.checked;
+        }
+        return o;
+    }
+
+    function applyToControls(s) {
+        for (const [key, sl] of Object.entries(sliders)) {
+            if (s[key] !== undefined) {
+                sl.el.value = s[key];
+                sl.val.textContent = sl.fmt(s[key]);
+            }
+        }
+        for (const [key, el] of Object.entries(checks)) {
+            if (s[key] !== undefined) el.checked = s[key];
+        }
+    }
+
+    function pushSettings() {
+        const s = gatherSettings();
+        sendMsg({ action: 'updateSettings', settings: s });
+        chrome.storage.local.set({ srt_popup_settings: s });
+    }
+
+    function loadSavedSettings() {
+        chrome.storage.local.get(['srt_popup_settings'], (data) => {
+            const s = data.srt_popup_settings || DEFAULTS;
+            applyToControls(s);
+        });
+    }
+
+    // ---- file import ----
+    drop.addEventListener('click', () => fileIn.click());
+
+    fileIn.addEventListener('change', async (e) => {
+        const f = e.target.files?.[0];
+        if (f) await loadFile(f);
     });
 
-    // 拖拽
-    dropZone.addEventListener('dragover', (e) => {
+    drop.addEventListener('dragover', (e) => {
         e.preventDefault();
-        dropZone.classList.add('dragover');
+        drop.classList.add('over');
     });
-
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('dragover');
-    });
-
-    dropZone.addEventListener('drop', async (e) => {
+    drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+    drop.addEventListener('drop', async (e) => {
         e.preventDefault();
-        dropZone.classList.remove('dragover');
-        const file = e.dataTransfer?.files[0];
-        if (!file) return;
-        await loadFile(file);
+        drop.classList.remove('over');
+        const f = e.dataTransfer?.files[0];
+        if (f) await loadFile(f);
     });
-
-    // =================== 文件加载 ===================
 
     async function loadFile(file) {
         try {
             const ext = file.name.split('.').pop().toLowerCase();
             if (!['srt', 'ass', 'ssa', 'vtt'].includes(ext)) {
-                showNotification('不支持的文件格式', true);
+                notify('不支持的格式', true);
                 return;
             }
 
-            const encoding = encodingSelect.value;
-            let content;
+            const encoding = enc.value;
+            let subtitles, count;
 
             if (encoding === 'auto') {
-                // 使用 SubtitleParser 的自动编码检测
-                const result = await SubtitleParser.readAndParse(file);
-                sendToContent(result.subtitles, result.fileName);
-                updateStatus(result.fileName, result.count);
-                showNotification(`✅ 加载成功: ${result.count} 条字幕`);
-                return;
+                const r = await SubtitleParser.readAndParse(file);
+                subtitles = r.subtitles;
+                count = r.count;
+            } else {
+                const content = await readText(file, encoding);
+                subtitles = SubtitleParser.parseText(content, ext);
+                count = subtitles.length;
             }
 
-            // 手动指定编码
-            content = await readFileAsText(file, encoding);
-            const subtitles = SubtitleParser.parseText(content, ext);
+            if (!count) { notify('未找到有效字幕', true); return; }
 
-            if (subtitles.length === 0) {
-                showNotification('未找到有效字幕', true);
-                return;
-            }
-
-            sendToContent(subtitles, file.name);
-            updateStatus(file.name, subtitles.length);
-            showNotification(`✅ 加载成功: ${subtitles.length} 条字幕`);
-
-        } catch (err) {
-            console.error('加载失败:', err);
-            showNotification(err.message, true);
-        }
-    }
-
-    function readFileAsText(file, encoding) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = () => reject(new Error('读取文件失败'));
-            reader.readAsText(file, encoding);
-        });
-    }
-
-    // =================== 与 Content Script 通信 ===================
-
-    function sendToContent(subtitles, fileName) {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (!tabs[0]?.id) return;
-            chrome.tabs.sendMessage(tabs[0].id, {
+            sendMsg({
                 action: 'loadSubtitles',
                 data: subtitles,
-                fileName: fileName,
+                fileName: file.name,
             });
-        });
-
-        // 保存
-        chrome.storage.local.set({
-            lastFileName: fileName,
-            lastCount: subtitles.length,
-        });
-    }
-
-    // =================== 状态 ===================
-
-    function refreshStatus() {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (!tabs[0]?.id) return;
-            chrome.tabs.sendMessage(tabs[0].id, { action: 'getStatus' }, (response) => {
-                if (chrome.runtime.lastError || !response) {
-                    // content script 可能还没加载
-                    chrome.storage.local.get(['lastFileName', 'lastCount'], (data) => {
-                        if (data.lastFileName) {
-                            updateStatus(data.lastFileName, data.lastCount);
-                        }
-                    });
-                    return;
-                }
-                if (response.fileName) {
-                    updateStatus(response.fileName, response.count);
-                }
-            });
-        });
-    }
-
-    function updateStatus(fileName, count) {
-        if (fileName) {
-            statusFileName.textContent = fileName;
-            statusFileName.classList.remove('empty');
-            statusCount.textContent = `${count} 条字幕`;
-            statusCount.style.display = 'block';
-        } else {
-            statusFileName.textContent = '未加载字幕文件';
-            statusFileName.classList.add('empty');
-            statusCount.style.display = 'none';
+            chrome.storage.local.set({ lastFileName: file.name, lastCount: count });
+            setStatus(file.name, count);
+            notify('已加载 ' + count + ' 条');
+        } catch (err) {
+            notify(err.message, true);
         }
     }
 
-    // =================== 按钮 ===================
-
-    btnOpenPip.addEventListener('click', () => {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (!tabs[0]?.id) return;
-            chrome.tabs.sendMessage(tabs[0].id, { action: 'openPip' });
-            showNotification('正在打开 PiP 字幕窗...');
+    function readText(file, encoding) {
+        return new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = (e) => resolve(e.target.result);
+            r.onerror = () => reject(new Error('读取失败'));
+            r.readAsText(file, encoding);
         });
-    });
-
-    btnRefresh.addEventListener('click', () => {
-        refreshStatus();
-        showNotification('已刷新');
-    });
-
-    // =================== 通知 ===================
-
-    let notifyTimer = null;
-    function showNotification(msg, isError = false) {
-        notification.textContent = msg;
-        notification.className = 'notification show' + (isError ? ' error' : '');
-        clearTimeout(notifyTimer);
-        notifyTimer = setTimeout(() => {
-            notification.classList.remove('show');
-        }, 2500);
     }
 
+    // ---- toolbar buttons ----
+    $('tbPip').addEventListener('click', () => {
+        sendMsg({ action: 'openPip' });
+        notify('PiP...');
+    });
+
+    $('tbClose').addEventListener('click', () => {
+        sendMsg({ action: 'removeOverlay' });
+        setStatus(null);
+        notify('已关闭');
+    });
+
+    $('tbReset').addEventListener('click', () => {
+        applyToControls(DEFAULTS);
+        pushSettings();
+        sendMsg({ action: 'resetSettings' });
+        notify('已恢复默认');
+    });
+
+    $('tbRefresh').addEventListener('click', () => {
+        refreshStatus();
+        notify('已刷新');
+    });
+
+    // ---- status ----
+    function refreshStatus() {
+        sendMsg({ action: 'getStatus' }, (resp) => {
+            if (resp && resp.fileName) {
+                setStatus(resp.fileName, resp.count);
+            } else {
+                chrome.storage.local.get(['lastFileName', 'lastCount'], (d) => {
+                    if (d.lastFileName) setStatus(d.lastFileName, d.lastCount);
+                });
+            }
+        });
+    }
+
+    function setStatus(name, count) {
+        if (name) {
+            stFile.textContent = name;
+            stFile.className = 'status-file';
+            stCount.textContent = count + ' 条';
+            stCount.style.display = 'block';
+        } else {
+            stFile.textContent = '未加载';
+            stFile.className = 'status-file none';
+            stCount.style.display = 'none';
+        }
+    }
+
+    // ---- messaging ----
+    function sendMsg(msg, cb) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (!tabs[0]?.id) return;
+            if (cb) {
+                chrome.tabs.sendMessage(tabs[0].id, msg, (resp) => {
+                    if (chrome.runtime.lastError) { cb(null); return; }
+                    cb(resp);
+                });
+            } else {
+                chrome.tabs.sendMessage(tabs[0].id, msg);
+            }
+        });
+    }
+
+    // ---- toast ----
+    let toastTimer = null;
+    function notify(msg, err) {
+        toast.textContent = msg;
+        toast.className = 'toast show' + (err ? ' err' : '');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+    }
 })();
