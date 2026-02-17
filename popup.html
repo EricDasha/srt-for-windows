@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnySub - 字幕挂载</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f14;
+            --bg-secondary: #16161d;
+            --bg-hover: #1e1e28;
+            --text-primary: #e8e8ef;
+            --text-secondary: #8888a0;
+            --accent: #4fc3f7;
+            --accent-hover: #81d4fa;
+            --success: #66bb6a;
+            --error: #ef5350;
+            --border: rgba(255,255,255,0.06);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 340px;
+            min-height: 200px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            font-size: 13px;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            padding: 16px 18px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header img {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+        }
+        .header-text h1 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .header-text .version {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: 'SF Mono', 'Consolas', monospace;
+        }
+
+        /* Main Content */
+        .content {
+            padding: 14px 18px;
+        }
+
+        /* Status Card */
+        .status-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .status-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+        .status-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+        .status-value.empty {
+            color: var(--text-secondary);
+            font-weight: 400;
+            font-style: italic;
+        }
+        .status-count {
+            font-size: 11px;
+            color: var(--accent);
+            margin-top: 4px;
+        }
+
+        /* File Drop Zone */
+        .drop-zone {
+            border: 2px dashed rgba(79, 195, 247, 0.25);
+            border-radius: 10px;
+            padding: 22px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s;
+            margin-bottom: 14px;
+            background: rgba(79, 195, 247, 0.03);
+        }
+        .drop-zone:hover {
+            border-color: rgba(79, 195, 247, 0.5);
+            background: rgba(79, 195, 247, 0.06);
+        }
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(79, 195, 247, 0.12);
+            transform: scale(1.01);
+        }
+        .drop-zone-icon {
+            font-size: 28px;
+            margin-bottom: 6px;
+        }
+        .drop-zone-text {
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 2px;
+        }
+        .drop-zone-hint {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* Buttons */
+        .btn-row {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .btn:hover {
+            background: var(--bg-hover);
+            border-color: rgba(255,255,255,0.12);
+        }
+        .btn:active {
+            transform: scale(0.97);
+        }
+        .btn-accent {
+            background: rgba(79, 195, 247, 0.12);
+            border-color: rgba(79, 195, 247, 0.25);
+            color: var(--accent);
+        }
+        .btn-accent:hover {
+            background: rgba(79, 195, 247, 0.2);
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 8px; left: 18px; right: 18px;
+            background: var(--success);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            transform: translateY(-80px);
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+            z-index: 100;
+        }
+        .notification.show {
+            transform: translateY(0);
+        }
+        .notification.error {
+            background: var(--error);
+        }
+
+        /* Footer */
+        .footer {
+            padding: 10px 18px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        /* Hidden file input */
+        #fileInput {
+            display: none;
+        }
+
+        /* Encoding selector */
+        .encoding-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .encoding-row label {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        .encoding-row select {
+            flex: 1;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 5px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+        }
+        .encoding-row select:focus {
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="logo.png" alt="AnySub">
+        <div class="header-text">
+            <h1>AnySub</h1>
+            <div class="version">v2.0.0</div>
+        </div>
+    </div>
+
+    <div class="content">
+        <!-- Status Card -->
+        <div class="status-card">
+            <div class="status-label">当前字幕</div>
+            <div class="status-value empty" id="statusFileName">未加载字幕文件</div>
+            <div class="status-count" id="statusCount" style="display:none"></div>
+        </div>
+
+        <!-- Drop Zone -->
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">📂</div>
+            <div class="drop-zone-text">点击选择 或 拖入字幕文件</div>
+            <div class="drop-zone-hint">.srt / .ass / .ssa / .vtt</div>
+        </div>
+
+        <!-- Encoding -->
+        <div class="encoding-row">
+            <label>编码:</label>
+            <select id="encodingSelect">
+                <option value="auto">自动检测</option>
+                <option value="utf-8">UTF-8</option>
+                <option value="gbk">GBK (简体中文)</option>
+                <option value="big5">Big5 (繁体中文)</option>
+                <option value="shift_jis">Shift-JIS (日文)</option>
+                <option value="euc-kr">EUC-KR (韩文)</option>
+            </select>
+        </div>
+
+        <!-- Buttons -->
+        <div class="btn-row">
+            <button class="btn btn-accent" id="btnOpenPip">
+                <span>🖼</span> PiP 字幕窗
+            </button>
+            <button class="btn" id="btnRefresh">
+                <span>🔄</span> 刷新状态
+            </button>
+        </div>
+    </div>
+
+    <div class="footer">
+        AnySub — 为任何视频挂载字幕
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <input type="file" id="fileInput" accept=".srt,.ass,.ssa,.vtt">
+
+    <script src="subtitleParser.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

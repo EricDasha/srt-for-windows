@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Edge with AnySub",
+            "type": "msedge",
+            "request": "launch",
+            "runtimeArgs": [
+                "--load-extension=${workspaceFolder}"
+            ],
+            "url": "https://www.google.com",
+            "presentation": {
+                "hidden": false
+            }
+        },
+        {
+            "name": "Launch Edge with AnySub (For Popup Debugging)",
+            "type": "msedge",
+            "request": "launch",
+            "runtimeArgs": [
+                "--load-extension=${workspaceFolder}"
+            ],
+            "url": "chrome-extension://<EXTENSION_ID>/popup.html",
+            "presentation": {
+                "hidden": true
+            }
+        }
+    ]
+}

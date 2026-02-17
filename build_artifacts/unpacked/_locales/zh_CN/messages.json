@@ -1,0 +1,8 @@
+{
+   "appDesc": {
+      "message": "网页视频本地字幕挂载工具。支持 .srt .ass .ssa 格式，实时同步与样式自定义，不上传任何数据。"
+   },
+   "appName": {
+      "message": "字在AnySub"
+   }
+}
